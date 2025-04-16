@@ -1,15 +1,15 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const db = require('./db');
 const path = require('path');
+const db = require('./db');
 const http = require('http');
-require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
 const port = process.env.PORT || 5000;
 
-// CORS config
+// CORS Configuration
 const corsOptions = {
   origin: [
     'https://4kdesigns-mada.com',
@@ -21,35 +21,35 @@ const corsOptions = {
   optionsSuccessStatus: 200
 };
 
+// Middlewares
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Route de santés
-app.get('/api/health', (req, res) => {
-  db.query('SELECT 1 + 1 AS result', (err) => {
-    if (err) {
-      return res.status(500).json({
-        status: 'DOWN',
-        dbError: err.message,
-        config: {
-          host: process.env.DB_HOST,
-          port: process.env.DB_PORT
-        }
-      });
-    }
-    res.json({ 
+// Health Check (Async/Await)
+app.get('/api/health', async (req, res) => {
+  try {
+    const [result] = await db.query('SELECT 1 + 1 AS test');
+    res.json({
       status: 'OK',
       db: 'Connected',
-      env: process.env.NODE_ENV 
+      testResult: result[0].test,
+      env: process.env.NODE_ENV
     });
-  });
+  } catch (err) {
+    res.status(500).json({
+      status: 'DOWN',
+      error: err.message,
+      dbConfig: {
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT
+      }
+    });
+  }
 });
 
-// Routes
+// Routes (Exemple avec async/await)
 app.use('/api/users', require('./routes/userRoutes'));
-app.use('/api/users', require('./routes/userRoutesLogin'));
-app.use('/api/users', require('./routes/userRoutesCRUD'));
 app.use('/api/clients', require('./routes/ClientRoute'));
 app.use('/api/factures', require('./routes/factureRoutes'));
 app.use('/api/produits', require('./routes/ProduitRoutes'));
@@ -61,6 +61,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Erreur serveur' });
 });
 
+// Démarrage du serveur
 server.listen(port, () => {
   console.log(`\n🚀 Server running on port ${port}`);
   console.log(`🔗 Environnement: ${process.env.NODE_ENV}`);
