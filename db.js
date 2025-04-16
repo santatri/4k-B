@@ -1,29 +1,28 @@
-const mysql = require('mysql');
 require('dotenv').config();
 
+// db.js
+const mysql = require('mysql2/promise'); // Version avec support Promises
+
 const pool = mysql.createPool({
-  connectionLimit: 10,
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   port: process.env.DB_PORT,
-  connectTimeout: 20000,
-  acquireTimeout: 20000,
-  timeout: 20000,
-  ssl: { rejectUnauthorized: false },
-  // ↓ Solution pour MySQL 8+ avec 'mysql' (ancienne méthode d'authentification)
-  authSwitchHandler: function ({ pluginName }, cb) {
-    if (pluginName === 'caching_sha2_password') {
-      // Force l'utilisation de 'mysql_native_password'
-      cb(null, Buffer.from(process.env.DB_PASSWORD + '\0'));
-    }
-  }
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  ssl: { rejectUnauthorized: false }, // Obligatoire pour Railway/Render
+  enableKeepAlive: true // Améliore la stabilité des connexions
 });
 
-// Test de connexion
-pool.getConnection((err, connection) => {
-  if (err) {
+// Test de connexion immédiat
+pool.getConnection()
+  .then(conn => {
+    console.log('✅ Connexion MySQL établie avec mysql2');
+    conn.release();
+  })
+  .catch(err => {
     console.error('❌ ERREUR MYSQL:', {
       code: err.code,
       message: err.message,
@@ -35,16 +34,6 @@ pool.getConnection((err, connection) => {
       }
     });
     process.exit(1);
-  } else {
-    connection.query('SELECT 1 + 1 AS test', (error, results) => {
-      connection.release();
-      if (error) {
-        console.error('❌ TEST QUERY FAILED:', error);
-      } else {
-        console.log('✅ MySQL Opérationnel. Test résultat:', results[0].test);
-      }
-    });
-  }
-});
+  });
 
 module.exports = pool;

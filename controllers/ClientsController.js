@@ -14,7 +14,7 @@ exports.getAllClients = (req, res) => {
   };
 
 // controllers/clientController.js
-const mysql = require('mysql');
+const mysql = require('mysql2');
 
 exports.createClient = async (req, res) => {
     const { nom, adresse, telephone, email } = req.body;
