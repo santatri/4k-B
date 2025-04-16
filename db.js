@@ -1,7 +1,7 @@
 require('dotenv').config();
 
-// db.js
-const mysql = require('mysql2/promise'); // Version avec support Promises
+// db.js (version optimisée)
+const mysql = require('mysql2/promise');
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
@@ -11,29 +11,14 @@ const pool = mysql.createPool({
   port: process.env.DB_PORT,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0,
-  ssl: { rejectUnauthorized: false }, // Obligatoire pour Railway/Render
-  enableKeepAlive: true // Améliore la stabilité des connexions
+  ssl: { rejectUnauthorized: false },
+  enableKeepAlive: true
 });
 
-// Test de connexion immédiat
-pool.getConnection()
-  .then(conn => {
-    console.log('✅ Connexion MySQL établie avec mysql2');
-    conn.release();
-  })
-  .catch(err => {
-    console.error('❌ ERREUR MYSQL:', {
-      code: err.code,
-      message: err.message,
-      stack: err.stack,
-      config: {
-        host: process.env.DB_HOST,
-        port: process.env.DB_PORT,
-        db: process.env.DB_NAME
-      }
-    });
-    process.exit(1);
-  });
+// Fonction wrapper pour les requêtes
+pool.executeQuery = async (sql, params) => {
+  const [rows] = await pool.query(sql, params);
+  return rows;
+};
 
 module.exports = pool;
